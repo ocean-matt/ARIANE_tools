@@ -129,6 +129,7 @@ class ariane_indices(object):
         mask_local = self.mask[j[0]+1:j[1]-1,
                                i[0]+1:i[1]-1] * self.tmask > 0
         k_loc, j_loc, i_loc = np.where(mask_local==1)
+        k_loc += 0.5
         active_cells = np.sum(mask_local, dtype=int)
         P = np.zeros((active_cells,len(self.flist)))
         U = np.zeros_like(P)
@@ -204,8 +205,8 @@ class ariane_indices(object):
                 self.a_ind = np.vstack( (self.a_ind,
                                          np.hstack((ii+i_loc[n]+i[0], 
                                                     jj+j_loc[n]+j[0], 
-                                                    np.zeros_like(ii)+k_loc[n], 
-                                                    np.zeros_like(ii)+t, 
+                                                    np.ones_like(ii)+k_loc[n], 
+                                                    np.ones_like(ii)+t, 
                                                     np.ones_like(ii)))
                                          ) )
                                            
@@ -241,10 +242,12 @@ class ariane_indices(object):
         data_gbl = np.zeros_like(self.mask)
         data_lcl = np.zeros_like(self.tmask)
         data_lcl[mask_lcl] = self.P[:,tslice]
-        data_gbl[j[0]+1:j[1]-1, i[0]+1:i[1]-1] = np.squeeze(data_lcl[kslice,:,:])
+        data_gbl[j[0]+1:j[1]-1, i[0]+1:i[1]-1] = np.squeeze(
+                                                 data_lcl[kslice,:,:])
         
         ax = sns.heatmap(data_gbl)
-            
+        ax.invert_yaxis()
+        return ax
     
     def _decomp(self, nu_int, nv_int): 
         """ 
