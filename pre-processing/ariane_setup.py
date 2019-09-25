@@ -20,6 +20,15 @@ Created on Thur Aug 22 07:39:56 2019
 
 A tool to generate indices for ingesting into ARIANE
 
+Example usage:
+    # first create a logical 2D mask where particles are to be released
+    import ariane_setup as ar
+    ar_ind=ar.ariane_indices(mask,'domain_cfg.nc')
+    ar_ind.get_dir_list('path_to_nemo_data','*U.nc','*V.nc')
+    ar_ind.gen_ind()
+    ar_ind.plot_map(0,0)
+    ar_ind.write_file('initial_positions.txt',1)
+
 @author James Harle
 
 $Last commit on:$
