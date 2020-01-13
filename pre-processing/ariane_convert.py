@@ -3,7 +3,7 @@
 """
 Created on Mon Jan 13 14:15:04 2020
 
-@author: mpc2g13
+@author: mpc2g13 (using script from jdha)
 """
 
 from netCDF4 import Dataset
