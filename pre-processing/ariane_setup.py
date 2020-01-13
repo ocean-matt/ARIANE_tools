@@ -41,7 +41,8 @@ import seaborn as sns; sns.set()
 from matplotlib.colors import ListedColormap
 from os import listdir, path
 import fnmatch
-from netCDF4 import netcdftime
+#from netCDF4 import netcdftime
+import cftime
 
 class ariane_indices(object):
     """
@@ -352,7 +353,7 @@ class ariane_indices(object):
                 x = [filename, index]
                 group.data_list.append(x)
                 group.time_counter.append(varid[index]+t_adjust)
-                group.date_counter.append(netcdftime.utime(varid.units,
+                group.date_counter.append(cftime.utime(varid.units,
                                                            varid.calendar).num2date(varid[index]+t_adjust))
             group.units = varid.units
             group.calendar = varid.calendar
