@@ -41,8 +41,12 @@ import seaborn as sns; sns.set()
 from matplotlib.colors import ListedColormap
 from os import listdir, path
 import fnmatch
+<<<<<<< HEAD
 #from netCDF4 import netcdftime
 import cftime
+=======
+from cftime import utime
+>>>>>>> e794ffe364e031090b420883104fb3af4fe5a9a6
 
 class ariane_indices(object):
     """
@@ -71,7 +75,12 @@ class ariane_indices(object):
         idim = nc.dimensions['x'].size
         jdim = nc.dimensions['y'].size
         kdim = nc.dimensions['z'].size
-        tdim = nc.dimensions['t'].size
+        
+        dims = nc.dimensions
+        
+        hast = dims.has_key('t')
+        if hast:
+            tdim = nc.dimensions['t'].size
         
         j_msk, i_msk = mask.shape
         
@@ -80,37 +89,54 @@ class ariane_indices(object):
             
         # Find the subdomain for ARIANE release        
         k_ind = (0, kdim) # TODO: add option for selective depths
-        t_ind = (0, tdim) # TODO: add option for multiple time slices
-        
+        if hast:
+            t_ind = (0, tdim) # TODO: add option for multiple time slices
+        else:
+            t_ind = (0, 0)
+            
         j_ind, i_ind = self._find_sub_inds(mask)
-        
-        # Open pointer to cfgfile
-        nc    = Dataset(cfgfile)
+    
         
         # TODO: Clean up adding 1 to indices as we may already be reading in
         #       the whole array
-        tl = nc.variables['top_level'][   0, 
-                                          j_ind[0]:j_ind[1],
-                                          i_ind[0]:i_ind[1]]
-        bl = nc.variables['bottom_level'][0, 
-                                          j_ind[0]:j_ind[1],
-                                          i_ind[0]:i_ind[1]]
+        if hast:
+            tl = nc.variables['top_level'][   0, 
+                                           j_ind[0]:j_ind[1],
+                                           i_ind[0]:i_ind[1]]
+            bl = nc.variables['bottom_level'][0, 
+                                           j_ind[0]:j_ind[1],
+                                           i_ind[0]:i_ind[1]]
+        else:
+            tl = nc.variables['top_level'][j_ind[0]:j_ind[1],
+                                           i_ind[0]:i_ind[1]]
+            bl = nc.variables['bottom_level'][j_ind[0]:j_ind[1],
+                                           i_ind[0]:i_ind[1]]
         
         self.tmask = self._gen_mask(tl, bl, kdim, 'T')[:, 1:-1, 1:-1]
         self.umask = self._gen_mask(tl, bl, kdim, 'U')[:, 1:-1, :   ]
         self.vmask = self._gen_mask(tl, bl, kdim, 'V')[:, :   , 1:-1]
         
-        self.e2u   = nc.variables['e2u'][0, 
+        if hast:
+            self.e2u   = nc.variables['e2u'][0, 
                                          j_ind[0]+1:j_ind[1]-1,
                                          i_ind[0]  :i_ind[1]-1]
-        self.e1v   = nc.variables['e1v'][0, 
+            self.e1v   = nc.variables['e1v'][0, 
                                          j_ind[0]  :j_ind[1]-1,
                                          i_ind[0]+1:i_ind[1]-1]
-        self.e3u   = nc.variables['e3u_0'][0, :,
+            self.e3u   = nc.variables['e3u_0'][0, :,
                                            j_ind[0]+1:j_ind[1]-1,
                                            i_ind[0]  :i_ind[1]-1]
-        self.e3v   = nc.variables['e3v_0'][0, :,
+            self.e3v   = nc.variables['e3v_0'][0, :,
                                            j_ind[0]  :j_ind[1]-1,
+                                           i_ind[0]+1:i_ind[1]-1]
+        else:
+            self.e2u   = nc.variables['e2u'][j_ind[0]+1:j_ind[1]-1,
+                                         i_ind[0]  :i_ind[1]-1]
+            self.e1v   = nc.variables['e1v'][j_ind[0]  :j_ind[1]-1,
+                                         i_ind[0]+1:i_ind[1]-1]
+            self.e3u   = nc.variables['e3u_0'][:, j_ind[0]+1:j_ind[1]-1,
+                                           i_ind[0]  :i_ind[1]-1]
+            self.e3v   = nc.variables['e3v_0'][:, j_ind[0]  :j_ind[1]-1,
                                            i_ind[0]+1:i_ind[1]-1]
         
         # Close pointer to cfgfile
@@ -139,15 +165,17 @@ class ariane_indices(object):
         mask_local = self.mask[j[0]+1:j[1]-1,
                                i[0]+1:i[1]-1] * self.tmask > 0
         k_loc, j_loc, i_loc = np.where(mask_local==1)
-        k_loc += 0.5
+        #k_loc += 0.5
+        
+        print self.flist
         active_cells = np.sum(mask_local, dtype=int)
         P = np.zeros((active_cells,len(self.flist)))
         U = np.zeros_like(P)
         V = np.zeros_like(P)
+        print U.shape
         
         # Check if flist is empty - if so ask for list of directory to populate
         # list
-        
         if self.flist == None:
             print('No file list to work from') # TODO: Throw an exception
         
@@ -161,12 +189,14 @@ class ariane_indices(object):
         for fn in self.flist:
             
             nc  = Dataset(fn[0])
-            u   = nc.variables['vozocrtx'][0, :,
+            u   = nc.variables['uo'][0, :,
                                        j[0]+1:j[1]-1,
                                        i[0]  :i[1]-1]
+            print u.shape, mask_local.shape
+            #print mask_local
             nc.close()
             nc  = Dataset(fn[1])
-            v   = nc.variables['vomecrty'][0, :,
+            v   = nc.variables['vo'][0, :,
                                        j[0]  :j[1]-1,
                                        i[0]+1:i[1]-1]
             nc.close()
@@ -192,7 +222,7 @@ class ariane_indices(object):
             # Derive a pvol number based on the max flow through a cell, let us
             # set the maximum number of particles to 64 as a first estimate
             
-            self.pvol = np.amax(U+V)/64.
+            self.pvol = np.amax(U+V)/128.
         
         pvol_r = 1/self.pvol
             
@@ -215,7 +245,7 @@ class ariane_indices(object):
                 self.a_ind = np.vstack( (self.a_ind,
                                          np.hstack((ii+i_loc[n]+i[0], 
                                                     jj+j_loc[n]+j[0], 
-                                                    np.ones_like(ii)+k_loc[n], 
+                                                    np.ones_like(ii)+k_loc[n]+0.5, 
                                                     np.ones_like(ii)+t, 
                                                     np.ones_like(ii)))
                                          ) )
@@ -252,8 +282,9 @@ class ariane_indices(object):
         data_gbl = np.zeros_like(self.mask)
         data_lcl = np.zeros_like(self.tmask)
         data_lcl[mask_lcl] = self.P[:,tslice]
-        data_gbl[j[0]+1:j[1]-1, i[0]+1:i[1]-1] = np.squeeze(
-                                                 data_lcl[kslice,:,:])
+        print mask_lcl.shape
+        print data_lcl.shape
+        data_gbl[j[0]+1:j[1]-1, i[0]+1:i[1]-1] = data_lcl[kslice,:,:]
         
         ax = sns.heatmap(data_gbl)
         ax.invert_yaxis()
@@ -353,7 +384,11 @@ class ariane_indices(object):
                 x = [filename, index]
                 group.data_list.append(x)
                 group.time_counter.append(varid[index]+t_adjust)
+<<<<<<< HEAD
                 group.date_counter.append(cftime.utime(varid.units,
+=======
+                group.date_counter.append(utime(varid.units,
+>>>>>>> e794ffe364e031090b420883104fb3af4fe5a9a6
                                                            varid.calendar).num2date(varid[index]+t_adjust))
             group.units = varid.units
             group.calendar = varid.calendar
