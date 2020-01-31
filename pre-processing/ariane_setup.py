@@ -101,11 +101,13 @@ class ariane_indices(object):
             bl = nc.variables['bottom_level'][0, 
                                            j_ind[0]:j_ind[1],
                                            i_ind[0]:i_ind[1]]
+            bl = np.where(bl>1, bl-1, bl)
         else:
             tl = nc.variables['top_level'][j_ind[0]:j_ind[1],
                                            i_ind[0]:i_ind[1]]
             bl = nc.variables['bottom_level'][j_ind[0]:j_ind[1],
                                            i_ind[0]:i_ind[1]]
+            bl = np.where(bl>1, bl-1, bl)
         
         self.tmask = self._gen_mask(tl, bl, kdim, 'T')[:, 1:-1, 1:-1]
         self.umask = self._gen_mask(tl, bl, kdim, 'U')[:, 1:-1, :   ]
@@ -162,12 +164,12 @@ class ariane_indices(object):
         k_loc, j_loc, i_loc = np.where(mask_local==1)
         #k_loc += 0.5
         
-        print self.flist
+        #print self.flist
         active_cells = np.sum(mask_local, dtype=int)
         P = np.zeros((active_cells,len(self.flist)))
         U = np.zeros_like(P)
         V = np.zeros_like(P)
-        print U.shape
+        #print U.shape
         
         # Check if flist is empty - if so ask for list of directory to populate
         # list
@@ -187,7 +189,7 @@ class ariane_indices(object):
             u   = nc.variables['uo'][0, :,
                                        j[0]+1:j[1]-1,
                                        i[0]  :i[1]-1]
-            print u.shape, mask_local.shape
+            #print u.shape, mask_local.shape
             #print mask_local
             nc.close()
             nc  = Dataset(fn[1])
